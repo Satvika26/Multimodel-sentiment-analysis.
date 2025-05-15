@@ -1,0 +1,20 @@
+This project is Task 4 in the AI internship at COTHON SOLUTIONS where I applied Natural Language Processing (NLP) techniques to analyze Amazon product reviews, extracting key insights about customer sentiment. Here's a summary of the steps involved:
+Data Collection & Preprocessing:
+I loaded a sample dataset containing 500 Amazon reviews.
+Conducted some basic exploration to understand the distribution of review scores and sample data.
+Sentiment Analysis using Vader:
+Applied Vader Sentiment Analysis to categorize reviews into positive, neutral, and negative sentiments.
+Visualized sentiment scores across various review star ratings, highlighting trends in customer sentiment.
+Advanced Sentiment Analysis with Roberta:
+Used Roberta, a pre-trained transformer model, to conduct more sophisticated sentiment analysis.
+Combined Vader and Roberta results to get a deeper understanding of sentiment distribution and model performance.
+Exploratory Data Analysis:
+Plotted key visualizations including compound sentiment scores, and sentiment breakdowns by Vader and Roberta.
+Performed pairwise analysis of sentiment scores, helping to compare model outputs.
+Key Insights:
+Discovered interesting anomalies where certain low-star reviews were classified positively by Roberta, while others were seen as negative by Vader.
+Highlighted the most positive and most negative reviews for both 1-star and 5-star ratings, providing a granular view of customer emotions.
+🔍 Objective:
+ By leveraging both classical sentiment analysis (Vader) and state-of-the-art transformer-based models (Roberta), this project allowed me to gain a richer understanding of customer feedback and sentiment trends across various product categories.
+📈 Next Steps:
+ Exploring how these sentiment scores could be integrated into product recommendation systems, sentiment-based trend analysis, and customer feedback analytics.
