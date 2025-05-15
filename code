@@ -1,0 +1,114 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import nltk
+from google.colab import drive
+from tqdm.notebook import tqdm
+from nltk.sentiment import SentimentIntensityAnalyzer
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from scipy.special import softmax
+
+# Mount Google Drive
+drive.mount('/content/drive')
+
+# Load the data
+file_path = '/content/Reviews.csv'
+df = pd.read_csv(file_path)
+print("Original shape:", df.shape)
+
+# Limit to 500 rows for processing
+df = df.head(500)
+print("After limiting rows:", df.shape)
+
+# Display the first few rows
+print(df.head())
+
+# Plot Review Stars distribution
+ax = df['Score'].value_counts().sort_index().plot(kind='bar', figsize=(10, 5), title='Count of Reviews by Stars')
+ax.set_xlabel('Review Stars')
+plt.show()
+
+from nltk.sentiment import SentimentIntensityAnalyzer
+from tqdm.notebook import tqdm
+# Sentiment Analysis with Vader
+sia = SentimentIntensityAnalyzer()
+print("Vader Sentiment Scores for example text:", sia.polarity_scores('I am so happy!'))
+
+# Apply Vader Sentiment Analysis to the entire dataset
+res = {}
+for i, row in tqdm(df.iterrows(), total=len(df)):
+    text = row['Text']
+    myid = row['Id']
+    res[myid] = sia.polarity_scores(text)
+
+# Convert results to DataFrame and merge with the original data
+vaders = pd.DataFrame(res).T.reset_index().rename(columns={'index': 'Id'})
+vaders = vaders.merge(df, how='left')
+print(vaders.head())
+
+# Plot compound sentiment scores by review stars
+ax = sns.barplot(data=vaders, x='Score', y='compound')
+ax.set_title('Compound Score by Amazon Star Review')
+plt.show()
+
+# Plot positive, neutral, and negative scores
+fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+sns.barplot(data=vaders, x='Score', y='pos', ax=axs[0])
+sns.barplot(data=vaders, x='Score', y='neu', ax=axs[1])
+sns.barplot(data=vaders, x='Score', y='neg', ax=axs[2])
+axs[0].set_title('Positive')
+axs[1].set_title('Neutral')
+axs[2].set_title('Negative')
+plt.tight_layout()
+plt.show()
+
+# Sentiment Analysis with Roberta
+MODEL = "cardiffnlp/twitter-roberta-base-sentiment"
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+
+def polarity_scores_roberta(example):
+    encoded_text = tokenizer(example, return_tensors='pt')
+    output = model(**encoded_text)
+    scores = output[0][0].detach().numpy()
+    scores = softmax(scores)
+    scores_dict = {
+        'roberta_neg': scores[0],
+        'roberta_neu': scores[1],
+        'roberta_pos': scores[2]
+    }
+    return scores_dict
+
+# Combine Vader and Roberta sentiment analysis
+res = {}
+for i, row in tqdm(df.iterrows(), total=len(df)):
+    try:
+        text = row['Text']
+        myid = row['Id']
+        vader_result = sia.polarity_scores(text)
+        vader_result_rename = {f"vader_{key}": value for key, value in vader_result.items()}
+        roberta_result = polarity_scores_roberta(text)
+        res[myid] = {**vader_result_rename, **roberta_result}
+    except RuntimeError:
+        print(f"Broke for id {myid}")
+
+# Convert results to DataFrame and merge
+results_df = pd.DataFrame(res).T.reset_index().rename(columns={'index': 'Id'})
+results_df = results_df.merge(df, how='left')
+print("Results DataFrame Columns:", results_df.columns)
+
+# Pairplot for Vader and Roberta sentiment scores
+sns.pairplot(
+    data=results_df,
+    vars=['vader_neg', 'vader_neu', 'vader_pos', 'roberta_neg', 'roberta_neu', 'roberta_pos'],
+    hue='Score',
+    palette='tab10'
+)
+plt.show()
+
+# Analyzing specific reviews
+print("Most positive Roberta score for 1-star reviews:", results_df.query('Score == 1').sort_values('roberta_pos', ascending=False)['Text'].values[0])
+print("Most positive Vader score for 1-star reviews:", results_df.query('Score == 1').sort_values('vader_pos', ascending=False)['Text'].values[0])
+print("Most negative Roberta score for 5-star reviews:", results_df.query('Score == 5').sort_values('roberta_neg', ascending=False)['Text'].values[0])
+print("Most negative Vader score for 5-star reviews:", results_df.query('Score == 5').sort_values('vader_neg', ascending=False)['Text'].values[0])
